@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/textarea"
 	bubbletea "github.com/charmbracelet/bubbletea"
 	lipgloss "github.com/charmbracelet/lipgloss"
 	"github.com/chatgp/gpt3"
@@ -29,7 +29,7 @@ type model struct {
 
 	// new chatlog should be an array of key/value pairs
 	chatLog   []ChatMessage
-	textInput textinput.Model
+	textarea textarea.Model
 	err       errMsg
 }
 
@@ -60,25 +60,26 @@ func initialModel() model {
 		},
 	}
 
-	ti := textinput.New()
-	ti.Placeholder = "Type your message here..."
-	ti.Focus()
-	ti.CharLimit = 500
+	ta := textarea.New()
+	ta.Placeholder = "Type your message here..."
+	ta.Focus()
+	ta.CharLimit = 500
+	ta.ShowLineNumbers = false
 
 	return model{
 		tabIndex:  0,
 		chatLog:   chatLog,
 		apiKey:    apiKey,
-		textInput: ti,
+		textarea:  ta,
 	}
 }
 
 func (m model) Init() bubbletea.Cmd {
-	return textinput.Blink
+	return textarea.Blink
 }
 
 func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
-	var cmd bubbletea.Cmd
+	var taCmd bubbletea.Cmd
 
 	switch msg := msg.(type) {
 	case bubbletea.KeyMsg:
@@ -88,13 +89,13 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 			return m, bubbletea.Quit
 
 		case bubbletea.KeyEnter:
-			var inputMessage = m.textInput.Value()
+			var inputMessage = m.textarea.Value()
 			if len(inputMessage) > 0 {
 				m.chatLog = append(m.chatLog, ChatMessage{
 					role:    "user",
 					content: inputMessage,
 				})
-				m.textInput.SetValue("")
+				m.textarea.SetValue("")
 				return m, m.sendMessage()
 			}
 		}
@@ -107,9 +108,9 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 		return m, nil
 	}
 
-	m.textInput, cmd = m.textInput.Update(msg)
+	m.textarea, taCmd = m.textarea.Update(msg)
 
-	return m, cmd
+	return m, taCmd
 }
 
 func (m model) sendMessage() bubbletea.Cmd {
@@ -125,7 +126,7 @@ func (m model) sendMessage() bubbletea.Cmd {
 		params := map[string]interface{}{
 			"model": "gpt-3.5-turbo",
 			"messages": []map[string]interface{}{
-				{"role": "user", "content": m.textInput.Value()},
+				{"role": "user", "content": m.textarea.Value()},
 			},
 		}
 
@@ -157,7 +158,7 @@ func (m model) View() string {
 	view.WriteString(chatLog)
 
 	view.WriteString("\n")
-	view.WriteString(m.textInput.View())
+	view.WriteString(m.textarea.View())
 
 	// Render help text
 	helpText := "Press TAB to switch between input and buttons. Press ENTER to send a message. Press ESC or CTRL+C to exit."
