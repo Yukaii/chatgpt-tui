@@ -28,9 +28,9 @@ type model struct {
 	apiKey   string
 
 	// new chatlog should be an array of key/value pairs
-	chatLog   []ChatMessage
+	chatLog  []ChatMessage
 	textarea textarea.Model
-	err       errMsg
+	err      errMsg
 }
 
 func main() {
@@ -67,10 +67,10 @@ func initialModel() model {
 	ta.ShowLineNumbers = false
 
 	return model{
-		tabIndex:  0,
-		chatLog:   chatLog,
-		apiKey:    apiKey,
-		textarea:  ta,
+		tabIndex: 0,
+		chatLog:  chatLog,
+		apiKey:   apiKey,
+		textarea: ta,
 	}
 }
 
