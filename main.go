@@ -35,6 +35,10 @@ type model struct {
 	ready    bool
 }
 
+// Taken from chatbot-ui
+// https://github.com/mckaywrigley/chatbot-ui/blob/main/utils/app/const.ts
+const DEFAULT_CHATGPT_PROMPT = "You are ChatGPT, a large language model trained by OpenAI. Follow the user's instructions carefully. Respond using markdown."
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -53,12 +57,7 @@ func main() {
 func initialModel() model {
 	apiKey := os.Getenv("OPENAI_API_KEY")
 
-	chatLog := []ChatMessage{
-		{
-			role:    "AI",
-			content: "Welcome to the chat!",
-		},
-	}
+	chatLog := []ChatMessage{}
 
 	ta := textarea.New()
 	ta.Placeholder = "Type your message here..."
@@ -102,14 +101,14 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 			inputMessage = strings.TrimSpace(inputMessage)
 
 			if len(inputMessage) > 0 {
-				const aiText = "Hello world"
+				var response = m.CallChatGPTApi()
 
 				m.chatLog = append(m.chatLog, ChatMessage{
 					role:    "user",
 					content: inputMessage,
 				}, ChatMessage{
-					role:    "AI",
-					content: aiText,
+					role:    "ai",
+					content: response,
 				})
 
 				m.textarea.Reset()
@@ -142,7 +141,15 @@ func (m model) CallChatGPTApi() string {
 	})
 
 	messages := []map[string]interface{}{
-		{"role": "user", "content": "Hello world"},
+		{"role": "system", "content": DEFAULT_CHATGPT_PROMPT},
+	}
+
+	for _, message := range m.chatLog {
+		messages = append(messages, map[string]interface{}{
+			// set all role to user
+			"role":    "user",
+			"content": message.content,
+		})
 	}
 
 	// Request a chat completion
