@@ -162,17 +162,6 @@ func (m model) CallChatGPTApi() string {
 	return message
 }
 
-// func (m model) sendMessage() bubbletea.Cmd {
-// 	return func() bubbletea.Msg {
-// 		// Set up the GPT-3 client
-//
-// 		return ChatMessage{
-// 			role:    "AI",
-// 			content: message,
-// 		}
-// 	}
-// }
-
 var tabStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Align(lipgloss.Bottom).Render
 var chatTextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("15")).Align(lipgloss.Bottom).Render
 
@@ -194,22 +183,4 @@ func (m model) View() string {
 		m.textarea.View(),
 		wordwrap.String(tabStyle("Press TAB to switch between input and buttons. Press ENTER to send a message. Press ESC or CTRL+C to exit."), m.viewport.Width),
 	)
-
-	// view := strings.Builder{}
-	//
-	// var chatLog = ""
-	// for _, message := range m.chatLog {
-	// 	chatLog += message.role + ": " + message.content + "\n"
-	// }
-	//
-	// view.WriteString(chatLog)
-	//
-	// view.WriteString("\n")
-	// view.WriteString(m.textarea.View())
-	//
-	// // Render help text
-	// helpText := "Press TAB to switch between input and buttons. Press ENTER to send a message. Press ESC or CTRL+C to exit."
-	// view.WriteString("\n\n" + tabStyle(helpText))
-	//
-	// return view.String()
 }
