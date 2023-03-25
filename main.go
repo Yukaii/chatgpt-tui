@@ -65,6 +65,7 @@ func initialModel() model {
 	ta.CharLimit = 500
 	ta.ShowLineNumbers = false
 	ta.Prompt = "┃ "
+	ta.SetHeight(5)
 
 	return model{
 		tabIndex: 0,
@@ -116,7 +117,7 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 		}
 
 	case bubbletea.WindowSizeMsg:
-		verticalMarginHeight := m.textarea.Height() + 1
+		verticalMarginHeight := m.textarea.Height() + 2
 
 		if !m.ready {
 			m.viewport = viewport.New(msg.Width, msg.Height-verticalMarginHeight)
@@ -126,6 +127,8 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 			m.viewport.Width = msg.Width
 			m.viewport.Height = msg.Height - verticalMarginHeight
 		}
+
+		m.textarea.SetWidth(msg.Width)
 		break
 
 	case ChatMessage:
@@ -189,6 +192,7 @@ func (m model) sendMessage(prompt string) bubbletea.Cmd {
 var tabStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Align(lipgloss.Bottom).Render
 var chatUserTextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("5")).Align(lipgloss.Left).Width(6).Render
 var chatAITextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Align(lipgloss.Left).Width(6).Render
+var helpMessageStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Align(lipgloss.Left).Render
 
 func (m model) RenderChatLog() string {
 	var maxWidth = m.viewport.Width - 6
@@ -219,9 +223,12 @@ func (m model) RenderChatLog() string {
 }
 
 func (m model) View() string {
+	helpMessage := helpMessageStyle("Press Ctrl+S to send message")
+
 	return fmt.Sprintf(
-		"%s\n\n%s",
+		"%s\n\n%s\n%s",
 		m.viewport.View(),
 		m.textarea.View(),
+		helpMessage,
 	)
 }
