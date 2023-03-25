@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -87,6 +87,8 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 	m.viewport, vpCmd = m.viewport.Update(msg)
 	m.textarea, taCmd = m.textarea.Update(msg)
 
+	var nextCmd bubbletea.Cmd = nil
+
 	switch msg := msg.(type) {
 	case bubbletea.KeyMsg:
 		switch msg.Type {
@@ -101,21 +103,16 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 			inputMessage = strings.TrimSpace(inputMessage)
 
 			if len(inputMessage) > 0 {
-				var response = m.CallChatGPTApi()
-
 				m.chatLog = append(m.chatLog, ChatMessage{
 					role:    "user",
 					content: inputMessage,
-				}, ChatMessage{
-					role:    "ai",
-					content: response,
 				})
-
+				m.viewport.SetContent(m.RenderChatLog())
 				m.textarea.Reset()
 
-				m.viewport.SetContent(m.RenderChatLog())
-				m.viewport.GotoBottom()
+				nextCmd = m.sendMessage(inputMessage)
 			}
+			break
 		}
 
 	case bubbletea.WindowSizeMsg:
@@ -129,44 +126,64 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 			m.viewport.Width = msg.Width
 			m.viewport.Height = msg.Height - verticalMarginHeight
 		}
+		break
+
+	case ChatMessage:
+		m.chatLog = append(m.chatLog, msg)
+		m.viewport.SetContent(m.RenderChatLog())
+		m.viewport.GotoBottom()
+		break
 	}
 
-	return m, bubbletea.Batch(taCmd, vpCmd)
+	return m, bubbletea.Batch(taCmd, vpCmd, nextCmd)
 }
 
-func (m model) CallChatGPTApi() string {
-	cli, _ := gpt3.NewClient(&gpt3.Options{
-		ApiKey:  m.apiKey,
-		Timeout: 30 * time.Second,
-	})
+func (m model) sendMessage(prompt string) bubbletea.Cmd {
+	return func() bubbletea.Msg {
 
-	messages := []map[string]interface{}{
-		{"role": "system", "content": DEFAULT_CHATGPT_PROMPT},
-	}
-
-	for _, message := range m.chatLog {
-		messages = append(messages, map[string]interface{}{
-			// set all role to user
-			"role":    "user",
-			"content": message.content,
+		cli, _ := gpt3.NewClient(&gpt3.Options{
+			ApiKey:  m.apiKey,
+			Timeout: 30 * time.Second,
 		})
+
+		messages := []map[string]interface{}{
+			{"role": "system", "content": DEFAULT_CHATGPT_PROMPT},
+		}
+
+		// append existing messages
+		for _, message := range m.chatLog {
+			messages = append(messages, map[string]interface{}{
+				// set all role to user
+				"role":    "user",
+				"content": message.content,
+			})
+		}
+
+		// append new prmopt
+		messages = append(messages, map[string]interface{}{
+			"role":    "user",
+			"content": prompt,
+		})
+
+		// Request a chat completion
+		uri := "/v1/chat/completions"
+		params := map[string]interface{}{
+			"model":    "gpt-3.5-turbo",
+			"messages": messages,
+		}
+
+		res, err := cli.Post(uri, params)
+		if err != nil {
+			log.Fatalf("request api failed: %v", err)
+		}
+
+		message := res.GetString("choices.0.message.content")
+
+		return ChatMessage{
+			role:    "ai",
+			content: message,
+		}
 	}
-
-	// Request a chat completion
-	uri := "/v1/chat/completions"
-	params := map[string]interface{}{
-		"model":    "gpt-3.5-turbo",
-		"messages": messages,
-	}
-
-	res, err := cli.Post(uri, params)
-	if err != nil {
-		log.Fatalf("request api failed: %v", err)
-	}
-
-	message := res.GetString("choices.0.message.content")
-
-	return message
 }
 
 var tabStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Align(lipgloss.Bottom).Render
