@@ -96,7 +96,7 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 		case bubbletea.KeyCtrlC:
 			return m, bubbletea.Quit
 
-		case bubbletea.KeyEnter:
+		case bubbletea.KeyCtrlS:
 			inputMessage := m.textarea.Value()
 
 			// trim whitespace
@@ -209,7 +209,7 @@ func (m model) RenderChatLog() string {
 		if message.role == "user" {
 			who = chatUserTextStyle("You:")
 		} else {
-			who = chatAITextStyle("AI: ")
+			who = chatAITextStyle("AI:")
 		}
 
 		chatLogString += fmt.Sprintf("%s\n%s", who, out)
