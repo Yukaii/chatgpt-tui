@@ -121,7 +121,6 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 
 		if !m.ready {
 			m.viewport = viewport.New(msg.Width, msg.Height-verticalMarginHeight)
-			m.viewport.SetContent(m.RenderChatLog())
 			m.ready = true
 		} else {
 			m.viewport.Width = msg.Width
@@ -129,6 +128,7 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 		}
 
 		m.textarea.SetWidth(msg.Width)
+		m.viewport.SetContent(m.RenderChatLog())
 		break
 
 	case ChatMessage:
