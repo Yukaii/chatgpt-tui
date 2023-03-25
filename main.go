@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
-	"github.com/muesli/reflow/wordwrap"
+	"github.com/charmbracelet/glamour"
 
 	bubbletea "github.com/charmbracelet/bubbletea"
 	lipgloss "github.com/charmbracelet/lipgloss"
@@ -93,7 +93,7 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 	case bubbletea.KeyMsg:
 		switch msg.Type {
 
-		case bubbletea.KeyCtrlC, bubbletea.KeyEsc:
+		case bubbletea.KeyCtrlC:
 			return m, bubbletea.Quit
 
 		case bubbletea.KeyEnter:
@@ -116,7 +116,7 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 		}
 
 	case bubbletea.WindowSizeMsg:
-		verticalMarginHeight := m.textarea.Height() + 2
+		verticalMarginHeight := m.textarea.Height() + 1
 
 		if !m.ready {
 			m.viewport = viewport.New(msg.Width, msg.Height-verticalMarginHeight)
@@ -143,7 +143,7 @@ func (m model) sendMessage(prompt string) bubbletea.Cmd {
 
 		cli, _ := gpt3.NewClient(&gpt3.Options{
 			ApiKey:  m.apiKey,
-			Timeout: 30 * time.Second,
+			Timeout: 60 * time.Second,
 		})
 
 		messages := []map[string]interface{}{
@@ -187,13 +187,32 @@ func (m model) sendMessage(prompt string) bubbletea.Cmd {
 }
 
 var tabStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Align(lipgloss.Bottom).Render
-var chatTextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("15")).Align(lipgloss.Bottom).Render
+var chatUserTextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("5")).Align(lipgloss.Left).Width(6).Render
+var chatAITextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Align(lipgloss.Left).Width(6).Render
 
 func (m model) RenderChatLog() string {
+	var maxWidth = m.viewport.Width - 6
+	// var chatTextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("15")).Align(lipgloss.Bottom).MaxWidth(maxWidth).Render
+	r, _ := glamour.NewTermRenderer(
+		// detect background color and pick either the default dark or light theme
+		glamour.WithAutoStyle(),
+		// wrap output at specific width (default is 80)
+		glamour.WithWordWrap(maxWidth),
+	)
+
 	chatLogString := ""
 
 	for _, message := range m.chatLog {
-		chatLogString += message.role + ": " + message.content + "\n"
+		out, _ := r.Render(message.content)
+
+		var who string
+		if message.role == "user" {
+			who = chatUserTextStyle("You:")
+		} else {
+			who = chatAITextStyle("AI: ")
+		}
+
+		chatLogString += fmt.Sprintf("%s\n%s", who, out)
 	}
 
 	return chatLogString
@@ -201,10 +220,8 @@ func (m model) RenderChatLog() string {
 
 func (m model) View() string {
 	return fmt.Sprintf(
-		"%d\n%s\n\n%s\n%s",
-		len(m.chatLog),
+		"%s\n\n%s",
 		m.viewport.View(),
 		m.textarea.View(),
-		wordwrap.String(tabStyle("Press TAB to switch between input and buttons. Press ENTER to send a message. Press ESC or CTRL+C to exit."), m.viewport.Width),
 	)
 }
