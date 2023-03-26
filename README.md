@@ -6,6 +6,6 @@
 
 - [x] Basic communiation with OpenAI API
 - [x] Basic Layout
-- [ ] Stream API response
+- [ ] Stream API response (preventing request timeout)
 - [ ] Save conversation to file
 - [ ] CLI option with [cobra](https://github.com/spf13/cobra)
