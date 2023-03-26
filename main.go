@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/glamour"
+	"github.com/tidwall/gjson"
 
 	bubbletea "github.com/charmbracelet/bubbletea"
 	lipgloss "github.com/charmbracelet/lipgloss"
@@ -33,6 +34,21 @@ type model struct {
 
 	viewport viewport.Model
 	ready    bool
+
+	isLoading bool
+}
+
+type TickMsg time.Time
+
+type EndSendingMsg struct {
+	err error
+}
+
+// Send a message every second.
+func tickEvery() bubbletea.Cmd {
+	return bubbletea.Every(time.Millisecond*200, func(t time.Time) bubbletea.Msg {
+		return TickMsg(t)
+	})
 }
 
 // Taken from chatbot-ui
@@ -68,15 +84,19 @@ func initialModel() model {
 	ta.SetHeight(5)
 
 	return model{
-		tabIndex: 0,
-		chatLog:  chatLog,
-		apiKey:   apiKey,
-		textarea: ta,
+		tabIndex:  0,
+		chatLog:   chatLog,
+		apiKey:    apiKey,
+		textarea:  ta,
+		isLoading: false,
 	}
 }
 
 func (m model) Init() bubbletea.Cmd {
-	return textarea.Blink
+	return bubbletea.Batch(
+		textarea.Blink,
+		tickEvery(),
+	)
 }
 
 func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
@@ -107,9 +127,13 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 				m.chatLog = append(m.chatLog, ChatMessage{
 					role:    "user",
 					content: inputMessage,
+				}, ChatMessage{
+					role:    "ai",
+					content: "Thinking...",
 				})
 				m.viewport.SetContent(m.RenderChatLog())
 				m.textarea.Reset()
+				m.isLoading = true
 
 				nextCmd = m.sendMessage(inputMessage)
 			}
@@ -135,6 +159,15 @@ func (m model) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 		m.chatLog = append(m.chatLog, msg)
 		m.viewport.SetContent(m.RenderChatLog())
 		m.viewport.GotoBottom()
+		break
+	case TickMsg:
+		if m.isLoading {
+			m.viewport.SetContent(m.RenderChatLog())
+			m.viewport.GotoBottom()
+		}
+		nextCmd = tickEvery()
+	case EndSendingMsg:
+		m.isLoading = false
 		break
 	}
 
@@ -173,19 +206,37 @@ func (m model) sendMessage(prompt string) bubbletea.Cmd {
 		params := map[string]interface{}{
 			"model":    "gpt-3.5-turbo",
 			"messages": messages,
+			"stream":   true,
 		}
 
 		res, err := cli.Post(uri, params)
 		if err != nil {
 			log.Fatalf("request api failed: %v", err)
+			m.chatLog = m.chatLog[:len(m.chatLog)-1]
+			return EndSendingMsg{
+				err: err,
+			}
 		}
 
-		message := res.GetString("choices.0.message.content")
+		var content = ""
 
-		return ChatMessage{
-			role:    "ai",
-			content: message,
+		for data := range res.Stream() {
+			d := gjson.ParseBytes(data)
+
+			if d.Get("choices.0.delta").Exists() {
+				s := d.Get("choices.0.delta.content").String()
+
+				content += s
+
+				// modify the last message
+				m.chatLog[len(m.chatLog)-1] = ChatMessage{
+					role:    "ai",
+					content: content, // join all messages
+				}
+			}
 		}
+
+		return EndSendingMsg{}
 	}
 }
 
