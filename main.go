@@ -78,7 +78,7 @@ func initialModel() model {
 	ta := textarea.New()
 	ta.Placeholder = "Type your message here..."
 	ta.Focus()
-	ta.CharLimit = 500
+	ta.CharLimit = -1
 	ta.ShowLineNumbers = false
 	ta.Prompt = "┃ "
 	ta.SetHeight(5)
