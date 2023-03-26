@@ -2,6 +2,9 @@
 
 [![asciicast](https://asciinema.org/a/6iE1fbCZR5YeZlle9CujTbpTB.svg)](https://asciinema.org/a/6iE1fbCZR5YeZlle9CujTbpTB)
 
+> Just found [j178/chatgpt](https://github.com/j178/chatgpt), which is a better
+> implementation of this project. I won't maintain this project anymore, haha
+
 ## Install
 
 ```bash
