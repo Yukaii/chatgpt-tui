@@ -9,3 +9,5 @@
 - [ ] Stream API response (preventing request timeout)
 - [ ] Save conversation to file
 - [ ] CLI option with [cobra](https://github.com/spf13/cobra)
+- [ ] configuration with [viper](https://github.com/spf13/viper)
+- [ ] bubblezone mouse support
