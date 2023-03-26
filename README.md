@@ -1,6 +1,6 @@
 # ChatGPT TUI
 
-![screenshot](./docs/assets/screenshot-1.png)
+![screenshot](./docs/assets/screenshot.png)
 
 ## Roadmap
 
